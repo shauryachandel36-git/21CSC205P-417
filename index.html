@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Campus Analyzer</title>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            margin: 0;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #38bdf8;
+            text-shadow: 0 0 10px #38bdf8;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        .card {
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #38bdf8;
+            border-radius: 10px;
+            box-shadow: 0 0 10px #38bdf8;
+            transition: 0.3s;
+        }
+
+        .card:hover {
+            transform: scale(1.02);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: #020617;
+        }
+
+        th, td {
+            border: 1px solid #1e293b;
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            color: #38bdf8;
+        }
+
+        tr:hover {
+            background: #1e293b;
+        }
+
+        .conflict {
+            color: #ef4444;
+            font-weight: bold;
+            text-shadow: 0 0 5px #ef4444;
+        }
+
+        #conflictsTable {
+            box-shadow: 0 0 20px red;
+        }
+
+        input {
+            padding: 8px;
+            margin: 5px;
+            background: #020617;
+            color: white;
+            border: 1px solid #38bdf8;
+        }
+
+        button {
+            padding: 8px;
+            background: #38bdf8;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 10px #38bdf8;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>⚡ Campus Resource Analyzer ⚡</h1>
+
+<div class="stats">
+    <div>Total Sessions: <span id="totalSessions">0</span></div>
+    <div>Total Conflicts: <span id="totalConflicts">0</span></div>
+</div>
+
+<div class="container">
+
+    <!-- Add Session -->
+    <div class="card">
+        <h2>Add Session</h2>
+        <input id="dept" placeholder="Dept ID (1=CSE, 2=ECE)">
+        <input id="resource" placeholder="Resource ID (1=Lab, 2=Hall)">
+        <input id="start" placeholder="Start (YYYY-MM-DD HH:MM:SS)">
+        <input id="end" placeholder="End (YYYY-MM-DD HH:MM:SS)">
+        <button onclick="addSession()">Add</button>
+    </div>
+
+    <!-- Search -->
+    <div class="card">
+        <h2>Search Sessions</h2>
+        <input id="search" placeholder="Search by department..." onkeyup="filterTable()">
+    </div>
+
+    <!-- Sessions -->
+    <div class="card">
+        <h2>Sessions</h2>
+        <table id="sessionsTable">
+            <tr>
+                <th>ID</th>
+                <th>Department</th>
+                <th>Resource</th>
+                <th>Start</th>
+                <th>End</th>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Conflicts -->
+    <div class="card">
+        <h2>Conflicts</h2>
+        <table id="conflictsTable">
+            <tr>
+                <th>ID</th>
+                <th>Details</th>
+                <th>Resource</th>
+            </tr>
+        </table>
+    </div>
+
+</div>
+
+<script>
+
+// Add Session
+function addSession() {
+    fetch('http://127.0.0.1:5000/add_session', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            dept_id: document.getElementById('dept').value,
+            resource_id: document.getElementById('resource').value,
+            start_time: document.getElementById('start').value,
+            end_time: document.getElementById('end').value
+        })
+    })
+    .then(() => {
+        alert("✅ Session added successfully!");
+        location.reload();
+    });
+}
+
+// Load Sessions
+fetch('http://127.0.0.1:5000/sessions')
+.then(res => res.json())
+.then(data => {
+    document.getElementById("totalSessions").innerText = data.length;
+
+    let table = document.getElementById("sessionsTable");
+
+    data.forEach(row => {
+        let tr = `<tr>
+            <td>${row.session_id}</td>
+            <td>${row.dept_name}</td>
+            <td>${row.resource_name}</td>
+            <td>${new Date(row.start_time).toLocaleTimeString()}</td>
+            <td>${new Date(row.end_time).toLocaleTimeString()}</td>
+        </tr>`;
+        table.innerHTML += tr;
+    });
+});
+
+// Load Conflicts
+fetch('http://127.0.0.1:5000/conflicts')
+.then(res => res.json())
+.then(data => {
+    document.getElementById("totalConflicts").innerText = data.length;
+
+    let table = document.getElementById("conflictsTable");
+
+    data.forEach(row => {
+        let tr = `<tr class="conflict">
+            <td>${row.conflict_id}</td>
+            <td>
+                ${row.dept1} (${new Date(row.start1).toLocaleTimeString()} - ${new Date(row.end1).toLocaleTimeString()})
+                vs
+                ${row.dept2} (${new Date(row.start2).toLocaleTimeString()} - ${new Date(row.end2).toLocaleTimeString()})
+            </td>
+            <td>${row.resource_name}</td>
+        </tr>`;
+        table.innerHTML += tr;
+    });
+});
+
+// Search Filter
+function filterTable() {
+    let input = document.getElementById("search").value.toLowerCase();
+    let rows = document.getElementById("sessionsTable").getElementsByTagName("tr");
+
+    for (let i = 1; i < rows.length; i++) {
+        let text = rows[i].innerText.toLowerCase();
+        rows[i].style.display = text.includes(input) ? "" : "none";
+    }
+}
+
+</script>
+
+</body>
+</html>
